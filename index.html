@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101010">
+  <title>Diskon — Your Music</title>
+  <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+</head>
+<body>
+  <aside class="sidebar">
+    <h1 class="logo">diskon<span>.</span></h1>
+    <p class="eyebrow">YOUR SOUND, YOUR WORLD</p>
+
+    <nav>
+      <button class="nav-btn active" data-tab="Home">⌂ &nbsp; Home</button>
+      <button class="nav-btn" data-tab="Search">⌕ &nbsp; Search</button>
+      <button class="nav-btn" data-tab="Liked">♡ &nbsp; Liked songs</button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <p class="eyebrow">YOUR MUSIC</p>
+      <p class="muted">Your library, all in one place.</p>
+      <button id="uploadBtn" class="outline-btn">＋ Add your music</button>
+      <input id="fileInput" type="file" accept="audio/*" multiple hidden>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">WELCOME TO YOUR NEXT OBSESSION</p>
+        <h2 id="pageTitle">Your music. Your way.</h2>
+      </div>
+      <input id="searchInput" type="search" placeholder="Search your music..." aria-label="Search music">
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="pill">THE DISKON EXPERIENCE</span>
+        <h2>Every vibe.<br>One place.</h2>
+        <p>Discover your sound. Build your world.</p>
+        <button id="exploreBtn" class="primary-btn">Explore your library ↗</button>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+        <div class="orb orb-three"></div>
+        <span class="hero-note">♫</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">YOUR COLLECTION</p>
+          <h2 id="listTitle">Made for your mood</h2>
+        </div>
+        <span id="trackCount" class="muted">0 tracks</span>
+      </div>
+      <div class="track-list" id="trackList"></div>
+      <p id="emptyMessage" class="empty-message" hidden>
+        No tracks here yet. Add an audio file or try another search.
+      </p>
+    </section>
+
+    <section class="section service-section">
+      <p class="eyebrow">YOUR STREAMING WORLD</p>
+      <h2>More music. Fewer tabs.</h2>
+      <p class="muted">Your future hub for music discovery and supported streaming services.</p>
+      <div class="service-grid">
+        <div class="service-card"><span>♫</span><strong>Your library</strong><small>Audio you add</small></div>
+        <div class="service-card"><span>◎</span><strong>Discover</strong><small>Find new sounds</small></div>
+        <div class="service-card"><span>↗</span><strong>Other services</strong><small>Integrations coming later</small></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="player">
+    <div class="now-playing">
+      <div class="cover" id="playerCover">♫</div>
+      <div class="song-info">
+        <strong id="playerTitle">Nothing playing yet</strong>
+        <span id="playerArtist">Choose a track to begin</span>
+      </div>
+    </div>
+    <div class="player-controls">
+      <button id="prevBtn" class="icon-btn" aria-label="Previous track">|◀</button>
+      <button id="playBtn" class="play-btn" aria-label="Play">▶</button>
+      <button id="nextBtn" class="icon-btn" aria-label="Next track">▶|</button>
+    </div>
+    <div class="player-status" id="playerStatus">Ready when you are ♡</div>
+  </footer>
+
+  <audio id="audioPlayer"></audio>
+  
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js")
+        .catch(error => console.error("Offline setup failed:", error));
+    });
+  }
+</script>
+
+  <script src="app.js"></script>
+</body>
+</html>
