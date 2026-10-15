@@ -238,3 +238,23 @@ audio.addEventListener("error", () => {
 });
 
 renderTracks();
+
+// Jamendo music connection
+const JAMENDO_CLIENT_ID = "00827def";
+
+async function searchJamendo(query) {
+  const url = new URL("https://api.jamendo.com/v3.0/tracks/");
+  url.search = new URLSearchParams({
+    client_id: JAMENDO_CLIENT_ID,
+    format: "json",
+    namesearch: query,
+    audioformat: "mp31",
+    limit: "15"
+  });
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Jamendo search failed");
+
+  const data = await response.json();
+  return data.results || [];
+}
