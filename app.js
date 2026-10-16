@@ -319,3 +319,42 @@ audio.addEventListener("error", () => {
 });
 
 renderTracks();
+
+
+document.querySelector("#loadSoundCloud")?.addEventListener("click", () => {
+  const input = document.querySelector("#soundcloudUrl");
+  const player = document.querySelector("#soundcloudPlayer");
+  const link = input.value.trim();
+
+  let url;
+
+  try {
+    url = new URL(link);
+  } catch {
+    player.textContent = "Enter a valid SoundCloud link.";
+    return;
+  }
+
+  if (
+    !["soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"]
+      .includes(url.hostname)
+  ) {
+    player.textContent = "Please enter a SoundCloud link.";
+    return;
+  }
+
+  const iframe = document.createElement("iframe");
+  iframe.width = "100%";
+  iframe.height = "166";
+  iframe.allow = "autoplay";
+  iframe.title = "SoundCloud player";
+  iframe.src =
+    "https://w.soundcloud.com/player/?url=" +
+    encodeURIComponent(url.href) +
+    "&color=%23b9f56a&auto_play=false";
+
+  iframe.style.border = "0";
+  iframe.style.borderRadius = "12px";
+
+  player.replaceChildren(iframe);
+});
