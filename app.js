@@ -7,19 +7,52 @@ const demoTracks = [
 ];
 
 let tracks = [...demoTracks];
+let jamendoTracks = [];
 let liked = new Set();
 let currentTrack = null;
 let currentTab = "Home";
+let searchTimer;
+let searchRequest = 0;
 
 const audio = document.querySelector("#audioPlayer");
 const list = document.querySelector("#trackList");
 const search = document.querySelector("#searchInput");
 const empty = document.querySelector("#emptyMessage");
 
+const JAMENDO_CLIENT_ID = "00827def";
+
+async function searchJamendo(query) {
+  const url = new URL("https://api.jamendo.com/v3.0/tracks/");
+  url.search = new URLSearchParams({
+    client_id: JAMENDO_CLIENT_ID,
+    format: "json",
+    namesearch: query,
+    audioformat: "mp31",
+    limit: "15"
+  }).toString();
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Jamendo search failed");
+
+  const data = await response.json();
+  if (data.headers?.status === "failed") {
+    throw new Error(data.headers.error_message || "Jamendo API error");
+  }
+
+  return data.results || [];
+}
+
 function visibleTracks() {
   const query = search.value.trim().toLowerCase();
+  const source = currentTab === "Liked"
+    ? [...tracks, ...jamendoTracks]
+    : [...tracks.filter(track => !track.demo), ...jamendoTracks];
 
-  return tracks.filter(track => {
+  const allTracks = currentTab === "Home"
+    ? tracks
+    : source;
+
+  return allTracks.filter(track => {
     const matchesSearch =
       track.title.toLowerCase().includes(query) ||
       track.artist.toLowerCase().includes(query);
@@ -51,7 +84,7 @@ function renderTracks() {
 
     const cover = document.createElement("div");
     cover.className = "track-cover";
-    cover.style.background = track.color;
+    cover.style.background = track.color || "#b9f56a";
     cover.textContent = "♫";
 
     const meta = document.createElement("div");
@@ -73,16 +106,12 @@ function renderTracks() {
     play.addEventListener("click", () => playTrack(track));
 
     const heart = document.createElement("button");
-    heart.className = "icon-btn" +
-      (liked.has(track.id) ? " liked" : "");
+    heart.className = "icon-btn" + (liked.has(track.id) ? " liked" : "");
     heart.textContent = liked.has(track.id) ? "♥" : "♡";
     heart.setAttribute("aria-label", `Like ${track.title}`);
     heart.addEventListener("click", () => {
-      if (liked.has(track.id)) {
-        liked.delete(track.id);
-      } else {
-        liked.add(track.id);
-      }
+      if (liked.has(track.id)) liked.delete(track.id);
+      else liked.add(track.id);
       renderTracks();
     });
 
@@ -102,7 +131,7 @@ async function playTrack(track) {
       try {
         await audio.play();
       } catch {
-        setStatus("Couldn't play this file. Try another audio file.");
+        setStatus("Couldn't play this track. Try another one.");
       }
     } else {
       audio.pause();
@@ -123,7 +152,7 @@ async function playTrack(track) {
     await audio.play();
     setStatus("Now playing ♪");
   } catch {
-    setStatus("Playback failed. Try another audio file.");
+    setStatus("Playback failed. Try another track.");
   }
 
   updatePlayer();
@@ -173,32 +202,80 @@ document.querySelector("#fileInput").addEventListener("change", event => {
 });
 
 search.addEventListener("input", () => {
-  currentTab = "Search";
+  currentTab = search.value.trim() ? "Search" : "Home";
+
   document.querySelectorAll(".nav-btn").forEach(button => {
-    button.classList.toggle("active", button.dataset.tab === "Search");
+    button.classList.toggle("active", button.dataset.tab === currentTab);
   });
+
+  clearTimeout(searchTimer);
+  const query = search.value.trim();
+  const requestId = ++searchRequest;
+
+  if (!query) {
+    jamendoTracks = [];
+    renderTracks();
+    return;
+  }
+
   renderTracks();
+
+  searchTimer = setTimeout(async () => {
+    try {
+      const results = await searchJamendo(query);
+      if (requestId !== searchRequest) return;
+
+      jamendoTracks = results
+        .filter(song => song.audio)
+        .map(song => ({
+          id: "jamendo-" + song.id,
+          title: song.name,
+          artist: song.artist_name,
+          url: song.audio,
+          demo: false,
+          color: "#b9f56a"
+        }));
+
+      renderTracks();
+
+      if (!jamendoTracks.length) {
+        setStatus("No playable Jamendo tracks found.");
+      }
+    } catch (error) {
+      console.error(error);
+      if (requestId === searchRequest) {
+        setStatus("Couldn't load Jamendo music. Try again.");
+      }
+    }
+  }, 400);
 });
 
 document.querySelectorAll(".nav-btn").forEach(button => {
   button.addEventListener("click", () => {
     currentTab = button.dataset.tab;
+
     document.querySelectorAll(".nav-btn").forEach(nav => {
       nav.classList.toggle("active", nav === button);
     });
-    if (currentTab !== "Search") search.value = "";
+
+    if (currentTab !== "Search") {
+      search.value = "";
+      jamendoTracks = [];
+      searchRequest++;
+      clearTimeout(searchTimer);
+    }
+
     document.querySelector("#pageTitle").textContent =
       currentTab === "Liked" ? "Your favorites." :
       currentTab === "Search" ? "Find your next favorite." :
       "Your music. Your way.";
+
     renderTracks();
   });
 });
 
 document.querySelector("#exploreBtn").addEventListener("click", () => {
-  document.querySelector(".section").scrollIntoView({
-    behavior: "smooth"
-  });
+  document.querySelector(".section").scrollIntoView({ behavior: "smooth" });
 });
 
 document.querySelector("#playBtn").addEventListener("click", async () => {
@@ -210,9 +287,10 @@ document.querySelector("#playBtn").addEventListener("click", async () => {
 });
 
 function playNext(direction) {
-  const playable = tracks.filter(track => !track.demo);
+  const playable = [...tracks, ...jamendoTracks].filter(track => !track.demo);
+
   if (!playable.length) {
-    setStatus("Add your own audio files to play music.");
+    setStatus("Search for music or add your own audio files.");
     return;
   }
 
@@ -228,33 +306,16 @@ audio.addEventListener("play", () => {
   updatePlayer();
   renderTracks();
 });
+
 audio.addEventListener("pause", () => {
   updatePlayer();
   renderTracks();
 });
+
 audio.addEventListener("ended", () => playNext(1));
+
 audio.addEventListener("error", () => {
   if (currentTrack) setStatus("Audio couldn't be loaded.");
 });
 
 renderTracks();
-
-// Jamendo music connection
-const JAMENDO_CLIENT_ID = "00827def";
-
-async function searchJamendo(query) {
-  const url = new URL("https://api.jamendo.com/v3.0/tracks/");
-  url.search = new URLSearchParams({
-    client_id: JAMENDO_CLIENT_ID,
-    format: "json",
-    namesearch: query,
-    audioformat: "mp31",
-    limit: "15"
-  });
-
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("Jamendo search failed");
-
-  const data = await response.json();
-  return data.results || [];
-}
